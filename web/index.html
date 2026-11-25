@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ARGUS-X — Track the Untrackable</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="mark"><span class="ring"></span><span class="dot"></span></div>
+    <div>
+      <h1>ARGUS<span>-X</span></h1>
+      <p>Long-horizon multi-object identity recovery</p>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="statusline">
+      <span class="pulse" id="pulse"></span>
+      <span id="engineStatus">engine idle</span>
+    </div>
+    <div class="tag">A05 · Advanced Computer Vision</div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="hero-copy">
+    <h2>Track the <em>untrackable.</em></h2>
+    <p>
+      Detection alone forgets. ARGUS-X keeps a durable identity per object across
+      occlusion, camera motion, appearance drift and detector dropouts — and refuses
+      to guess when the evidence is ambiguous.
+    </p>
+    <div class="hero-pills">
+      <span>Kalman motion</span>
+      <span>Global camera compensation</span>
+      <span>Appearance gallery</span>
+      <span>Hungarian association</span>
+      <span>Verified re-identification</span>
+    </div>
+  </div>
+
+  <div class="run-panel">
+    <div class="panel-head">
+      <h3>Run a sequence</h3>
+      <span class="chip" id="demoChip">demo reel · test.mp4</span>
+    </div>
+
+    <div class="field">
+      <label for="frames">Frames to process</label>
+      <div class="segmented" id="framesSeg">
+        <button data-frames="120" class="active">120</button>
+        <button data-frames="240">240</button>
+        <button data-frames="480">480</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Source</label>
+      <div class="source-row">
+        <button class="btn primary" id="runDemo">▶ Run demo reel</button>
+        <button class="btn ghost" id="pickFile">Upload clip</button>
+        <input type="file" id="fileInput" accept="video/mp4,video/quicktime,video/x-msvideo" hidden />
+      </div>
+    </div>
+
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-meta">
+        <span id="progressLabel">idle</span>
+        <span id="progressCount"></span>
+      </div>
+      <div class="progress"><div class="bar" id="progressBar"></div></div>
+    </div>
+    <p class="hint" id="runHint">Runs on CPU. 240 frames ≈ 1–2 minutes.</p>
+  </div>
+</section>
+
+<main>
+  <section class="stage">
+    <div class="video-shell">
+      <div class="video-head">
+        <span class="live">LIVE TRACK</span>
+        <span id="videoMeta">no sequence loaded</span>
+      </div>
+      <div class="video-body" id="videoBody">
+        <div class="placeholder" id="videoPlaceholder">
+          <div class="crosshair"></div>
+          <p>Awaiting sequence</p>
+          <small>Identity overlays render here as the tracker runs</small>
+        </div>
+        <img id="stream" alt="ARGUS-X annotated stream" />
+      </div>
+      <div class="video-foot">
+        <span id="frameStats">—</span>
+        <a class="btn small ghost" id="downloadLink" href="#" hidden>Download .mp4</a>
+      </div>
+    </div>
+
+    <aside class="metrics">
+      <div class="metric-card accent">
+        <span class="metric-label">Identities</span>
+        <b id="mIdentities">—</b>
+        <small>distinct IDs assigned</small>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Re-acquisitions</span>
+        <b id="mRecoveries">—</b>
+        <small>verified returns</small>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Longest occlusion</span>
+        <b id="mOcclusion">—</b>
+        <small>frames held in memory</small>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Refused matches</span>
+        <b id="mRejected">—</b>
+        <small>ambiguous or duplicate</small>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Throughput</span>
+        <b id="mFps">—</b>
+        <small>frames per second</small>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Localised now</span>
+        <b id="mActive">—</b>
+        <small>identities active at end</small>
+      </div>
+    </aside>
+  </section>
+
+  <section class="card live-camera">
+    <div class="card-head">
+      <h3>Live camera</h3>
+      <div class="cam-controls">
+        <button class="btn small primary" id="camStart">&#9673; Start camera</button>
+        <button class="btn small ghost" id="camStop" disabled>Stop</button>
+      </div>
+    </div>
+    <div class="video-shell">
+      <div class="video-head">
+        <span class="live">CAMERA</span>
+        <span id="camStatus">camera idle &middot; start it to run the identity engine on live frames</span>
+      </div>
+      <div class="video-body" id="camBody">
+        <div class="placeholder" id="camPlaceholder">
+          <div class="crosshair"></div>
+          <p>Camera offline</p>
+          <small>Identities persist across frames while you watch</small>
+        </div>
+        <img id="camStream" alt="ARGUS-X live camera stream" />
+      </div>
+      <div class="video-foot">
+        <span id="camStats">&mdash;</span>
+        <span class="muted">live inference · identity memory</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="two-col">
+    <div class="card">
+      <div class="card-head">
+        <h3>Identity timeline</h3>
+        <span class="muted" id="timelineMeta">presence, loss and recovery per identity</span>
+      </div>
+      <div class="timeline" id="timeline">
+        <div class="empty">Run a sequence to populate the identity memory.</div>
+      </div>
+      <div class="legend">
+        <span><i class="sw active"></i>tracked</span>
+        <span><i class="sw lost"></i>lost / occluded</span>
+        <span><i class="sw recovered"></i>re-acquired</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h3>Decision log</h3>
+        <span class="muted">every create / loss / recovery, with confidence</span>
+      </div>
+      <div class="events" id="events">
+        <div class="empty">No events yet.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="two-col">
+    <div class="card">
+      <div class="card-head">
+        <h3>Verified identities</h3>
+        <span class="muted">appearance gallery size and observation count</span>
+      </div>
+      <div class="table-wrap">
+        <table id="identityTable">
+          <thead>
+            <tr>
+              <th>ID</th><th>State</th><th>First</th><th>Last</th>
+              <th>Hits</th><th>Gallery</th><th>Re-acq</th><th>Quality</th>
+            </tr>
+          </thead>
+          <tbody><tr><td colspan="8" class="empty">Run a sequence to inspect identities.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card bench">
+      <div class="card-head">
+        <h3>Benchmark · labelled synthetic set</h3>
+        <button class="btn small ghost" id="runBench">Run benchmark</button>
+      </div>
+      <p class="muted small" id="benchStatus">
+        300 frames · 4 actors · moving camera · 120 px pillar · look-alike jackets ·
+        5% detector dropout · random false positives. Ground truth is known exactly.
+      </p>
+      <div class="table-wrap">
+        <table id="benchTable">
+          <thead>
+            <tr><th>Metric</th><th>IoU baseline</th><th>ARGUS-X</th></tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="3" class="empty">Run the benchmark to compute CLEAR-MOT + IDF1.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="footnote" id="benchNote"></p>
+    </div>
+  </section>
+
+  <section class="card pipeline">
+    <div class="card-head">
+      <h3>Pipeline</h3>
+      <span class="muted">one perception cycle per frame</span>
+    </div>
+    <ol class="stages">
+      <li><span class="num">01</span><b>Camera compensation</b><p>ORB + RANSAC translation estimate shifts every prediction into the current frame.</p></li>
+      <li><span class="num">02</span><b>Motion prediction</b><p>Per-track Kalman filter on centre, aspect and height with damped velocity while lost.</p></li>
+      <li><span class="num">03</span><b>Appearance embedding</b><p>Standardised colour layout + HSV histogram + gradient texture, quality-gated.</p></li>
+      <li><span class="num">04</span><b>Association</b><p>Two-stage gated Hungarian matching; low-confidence detections need motion <em>and</em> appearance.</p></li>
+      <li><span class="num">05</span><b>Identity memory</b><p>EMA embedding plus a 12-crop gallery; identities outlive tracks for 900 frames.</p></li>
+      <li><span class="num">06</span><b>Verified recovery</b><p>Class, time, motion, multi-cue appearance and ambiguity gates, then a 3-frame confirmation.</p></li>
+    </ol>
+  </section>
+</main>
+
+<footer>
+  <span>ARGUS-X · identity is a memory, not a tracker id</span>
+  <span id="footStats">—</span>
+</footer>
+
+<script src="/app.js"></script>
+</body>
+</html>
